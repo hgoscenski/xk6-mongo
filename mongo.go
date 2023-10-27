@@ -117,7 +117,6 @@ func (c *Client) Find(database string, collection string, filter interface{}, op
 	log.Print(filter_is, filter)
 
 	opt := toFindOptions(createOptions(opts))
-	log.Printf("%+v", opt)
 
 	cur, err := col.Find(context.TODO(), filter, opt)
 	if err != nil {
@@ -136,7 +135,6 @@ func (c *Client) CountDocuments(database string, collection string, filter inter
 	log.Print(filter_is, filter)
 
 	opt := toCountOptions(createOptions(opts))
-	log.Printf("%+v", opt)
 
 	cur, err := col.CountDocuments(context.TODO(), filter, opt)
 	if err != nil {
