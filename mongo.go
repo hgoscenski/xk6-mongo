@@ -2,6 +2,8 @@ package xk6_mongo
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -23,6 +25,53 @@ type Mongo struct{}
 // Client is the Mongo client wrapper.
 type Client struct {
 	client *mongo.Client
+}
+
+type Options struct {
+	Limit int64 `json:"limit"`
+	Skip int64 `json:"skip"`
+	Sort interface{} `json:"sort"`
+}
+
+func createOptions(opts map[string]any) Options {
+	jsonStr, err := json.Marshal(opts)
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    // Convert json string to struct
+    var opt Options
+    if err := json.Unmarshal(jsonStr, &opt); err != nil {
+        log.Println(err)
+    }
+	return opt
+}
+
+func toFindOptions(opts Options) *options.FindOptions {
+	opt := options.Find()
+
+	if opts.Limit > 0 {
+		opt.SetLimit(opts.Limit)
+	}
+	if opts.Skip > 0 {
+		opt.SetSkip(opts.Skip)
+	}
+
+	if opts.Sort != nil  {
+		opt.SetSort(opts.Sort)
+	}
+	return opt
+}
+
+func toCountOptions(opts Options) *options.CountOptions {
+	opt := options.Count()
+	if opts.Limit > 0 {
+		opt.SetLimit(opts.Limit)
+	}
+	if opts.Skip > 0 {
+		opt.SetSkip(opts.Skip)
+	}
+	return opt
 }
 
 // NewClient represents the Client constructor (i.e. `new mongo.Client()`) and
@@ -62,12 +111,15 @@ func (c *Client) InsertMany(database string, collection string, docs []any) erro
 	return nil
 }
 
-func (c *Client) Find(database string, collection string, filter interface{}, limit int64) []bson.M {
+func (c *Client) Find(database string, collection string, filter interface{}, opts map[string]any) []bson.M {
 	db := c.client.Database(database)
 	col := db.Collection(collection)
 	log.Print(filter_is, filter)
 
-	cur, err := col.Find(context.TODO(), filter, options.Find().SetLimit(limit))
+	opt := toFindOptions(createOptions(opts))
+	log.Printf("%+v", opt)
+
+	cur, err := col.Find(context.TODO(), filter, opt)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,12 +130,15 @@ func (c *Client) Find(database string, collection string, filter interface{}, li
 	return results
 }
 
-func (c *Client) CountDocuments(database string, collection string, filter interface{}, limit int64) int64 {
+func (c *Client) CountDocuments(database string, collection string, filter interface{}, opts map[string]any) int64 {
 	db := c.client.Database(database)
 	col := db.Collection(collection)
 	log.Print(filter_is, filter)
 
-	cur, err := col.CountDocuments(context.TODO(), filter, options.Count().SetLimit(limit))
+	opt := toCountOptions(createOptions(opts))
+	log.Printf("%+v", opt)
+
+	cur, err := col.CountDocuments(context.TODO(), filter, opt)
 	if err != nil {
 		log.Fatal(err)
 	}
